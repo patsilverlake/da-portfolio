@@ -281,8 +281,73 @@ export function PortfolioBuilder() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-pulse text-lg font-semibold">Loading Market Data...</div>
+            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+                <div className="flex flex-col items-center gap-6">
+                    {/* Animated chart */}
+                    <div className="relative w-48 h-24">
+                        <svg viewBox="0 0 160 64" className="w-full h-full overflow-visible">
+                            {/* Subtle grid */}
+                            <line x1="0" y1="16" x2="160" y2="16" stroke="#e2e8f0" strokeWidth="0.5" />
+                            <line x1="0" y1="32" x2="160" y2="32" stroke="#e2e8f0" strokeWidth="0.5" />
+                            <line x1="0" y1="48" x2="160" y2="48" stroke="#e2e8f0" strokeWidth="0.5" />
+
+                            {/* Green gradient fill under the line */}
+                            <defs>
+                                <linearGradient id="greenGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#22c55e" stopOpacity="0.15" />
+                                    <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
+                                </linearGradient>
+                                <clipPath id="chartClip">
+                                    <rect x="0" y="0" width="160" height="64">
+                                        <animate
+                                            attributeName="width"
+                                            from="0"
+                                            to="160"
+                                            dur="1.5s"
+                                            repeatCount="indefinite"
+                                        />
+                                    </rect>
+                                </clipPath>
+                            </defs>
+
+                            {/* Area fill */}
+                            <path
+                                d="M0,48 Q20,44 40,40 T80,32 T120,20 T160,8 L160,64 L0,64 Z"
+                                fill="url(#greenGradient)"
+                                clipPath="url(#chartClip)"
+                            />
+
+                            {/* Animated green line going up to top-right */}
+                            <path
+                                d="M0,48 Q20,44 40,40 T80,32 T120,20 T160,8"
+                                fill="none"
+                                stroke="#22c55e"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                clipPath="url(#chartClip)"
+                            />
+
+                            {/* Moving dot at the end */}
+                            <circle r="4" fill="#22c55e">
+                                <animateMotion
+                                    dur="1.5s"
+                                    repeatCount="indefinite"
+                                    path="M0,48 Q20,44 40,40 T80,32 T120,20 T160,8"
+                                />
+                            </circle>
+                        </svg>
+                    </div>
+
+                    {/* Loading text */}
+                    <div className="flex flex-col items-center gap-2">
+                        <p className="text-base font-medium text-slate-700">
+                            Loading Market Data
+                        </p>
+                        <p className="text-sm text-slate-400">
+                            Fetching latest prices...
+                        </p>
+                    </div>
+                </div>
             </div>
         );
     }
