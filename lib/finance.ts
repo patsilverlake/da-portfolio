@@ -439,3 +439,76 @@ export function calculateCorrelation(
 
     return numerator / denominator;
 }
+
+export interface RollingMetricsData {
+    date: string;
+    sharpeRatio: number | null;
+    volatility: number | null;
+}
+
+// Number of trading days in a year for crypto (trades 365 days)
+const TRADING_DAYS_PER_YEAR = 365;
+
+/**
+ * Calculate 1-year rolling Sharpe ratio and volatility using daily returns
+ * Matches the methodology used in calculateMetrics for consistency
+ * @param portfolioValues - Array of daily portfolio values
+ * @param riskFreeRate - Annual risk-free rate (default 3%)
+ * @returns Array of rolling metrics with date, sharpeRatio, and volatility
+ */
+export function calculateRollingMetrics(
+    portfolioValues: { date: string; value: number }[],
+    riskFreeRate: number = ANNUAL_RISK_FREE_RATE
+): RollingMetricsData[] {
+    if (portfolioValues.length < 2) return [];
+
+    // Calculate daily returns
+    const dailyReturns: { date: string; return: number }[] = [];
+    for (let i = 1; i < portfolioValues.length; i++) {
+        const dailyReturn = (portfolioValues[i].value / portfolioValues[i - 1].value) - 1;
+        dailyReturns.push({
+            date: portfolioValues[i].date,
+            return: dailyReturn
+        });
+    }
+
+    // Need at least 365 days for 1-year rolling calculation
+    if (dailyReturns.length < TRADING_DAYS_PER_YEAR) return [];
+
+    const results: RollingMetricsData[] = [];
+
+    // Calculate rolling metrics for each day starting from day 365
+    // Sample weekly to reduce data points while maintaining the rolling window
+    for (let i = TRADING_DAYS_PER_YEAR - 1; i < dailyReturns.length; i += 7) {
+        // Get the last 365 days of returns
+        const rollingReturns = dailyReturns.slice(i - TRADING_DAYS_PER_YEAR + 1, i + 1).map(d => d.return);
+
+        // Calculate mean daily return
+        const meanReturn = rollingReturns.reduce((a, b) => a + b, 0) / rollingReturns.length;
+
+        // Calculate daily standard deviation
+        const variance = rollingReturns.reduce((a, b) => a + Math.pow(b - meanReturn, 2), 0) / rollingReturns.length;
+        const dailyStdDev = Math.sqrt(variance);
+
+        // Annualize the volatility (multiply by sqrt(365) for daily crypto data)
+        const annualizedVolatility = dailyStdDev * Math.sqrt(TRADING_DAYS_PER_YEAR);
+
+        // Calculate CAGR for the rolling period
+        const startValue = portfolioValues[i - TRADING_DAYS_PER_YEAR + 1].value;
+        const endValue = portfolioValues[i + 1].value; // +1 because dailyReturns is offset by 1
+        const cagr = (endValue / startValue) - 1; // 1-year period, so no need for power calculation
+
+        // Calculate Sharpe ratio: (CAGR - Risk Free Rate) / Annualized Volatility
+        const sharpeRatio = annualizedVolatility !== 0
+            ? (cagr - riskFreeRate) / annualizedVolatility
+            : 0;
+
+        results.push({
+            date: dailyReturns[i].date,
+            sharpeRatio,
+            volatility: annualizedVolatility
+        });
+    }
+
+    return results;
+}

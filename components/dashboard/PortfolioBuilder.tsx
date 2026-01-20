@@ -4,10 +4,10 @@ import { useState, useEffect, useMemo } from "react";
 import { AssetAllocator } from "./AssetAllocator";
 import { AssetSearch } from "./AssetSearch";
 import { PortfolioManager } from "./PortfolioManager";
-import { PerformanceChart } from "./PerformanceChart";
+import { PerformanceChartTabs } from "./PerformanceChartTabs";
 import { AssetWarningBanner } from "./AssetWarningBanner";
 import { MonthlyPerformance } from "./MonthlyPerformance";
-import { calculateMetrics, calculatePortfolioHistory, DailyData, validateAssetsForDateRange } from "@/lib/finance";
+import { calculateMetrics, calculatePortfolioHistory, calculateRollingMetrics, DailyData, validateAssetsForDateRange } from "@/lib/finance";
 import { PortfolioConfig } from "@/lib/types";
 import type { AssetValidation, RebalanceFrequency } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -274,6 +274,10 @@ export function PortfolioBuilder() {
 
         return calculateMetrics(chartData, initialInvestment, sp500Data);
     }, [chartData, initialInvestment, marketData]);
+
+    const rollingMetrics = useMemo(() => {
+        return calculateRollingMetrics(chartData);
+    }, [chartData]);
 
     if (loading) {
         return (
@@ -559,53 +563,63 @@ export function PortfolioBuilder() {
                         />
                     )}
 
-                    {/* Key Metrics Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                        <StatCard
-                            title="Final Balance"
-                            value={`$${metrics.finalBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                            icon={DollarSign}
-                            subtext={`Returns: ${(metrics.totalReturn * 100).toFixed(1)}%`}
-                            color="text-green-600"
-                        />
-                        <StatCard
-                            title="Annualized (CAGR)"
-                            value={`${(metrics.cagr * 100).toFixed(1)}%`}
-                            icon={TrendingUp}
-                            color="text-blue-600"
-                        />
-                        <StatCard
-                            title="Sharpe Ratio"
-                            value={metrics.sharpeRatio.toFixed(2)}
-                            icon={Activity}
-                            subtext="Risk Adjusted (3% RFR)"
-                        />
-                        <StatCard
-                            title="Volatility"
-                            value={`${(metrics.volatility * 100).toFixed(1)}%`}
-                            icon={AlertTriangle}
-                            color="text-orange-500"
-                        />
-                        <StatCard
-                            title="S&P 500 Correl."
-                            value={metrics.sp500Correlation !== undefined ? metrics.sp500Correlation.toFixed(2) : 'N/A'}
-                            icon={Activity}
-                            color={
-                                metrics.sp500Correlation === undefined ? "text-gray-400" :
-                                metrics.sp500Correlation > 0.7 ? "text-blue-600" :
-                                metrics.sp500Correlation > 0.3 ? "text-gray-600" :
-                                "text-orange-500"
-                            }
-                            subtext={
-                                metrics.sp500Correlation === undefined ? "Unavailable" :
-                                metrics.sp500Correlation > 0.7 ? "High correlation" :
-                                metrics.sp500Correlation > 0.3 ? "Moderate" :
-                                "Low correlation"
-                            }
-                        />
+                    {/* Key Metrics Section */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-medium text-muted-foreground">
+                                Performance Metrics
+                            </h3>
+                            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                                {new Date(startDate).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} - {new Date(endDate).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                            <StatCard
+                                title="Final Balance"
+                                value={`$${metrics.finalBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                                icon={DollarSign}
+                                subtext={`Returns: ${(metrics.totalReturn * 100).toFixed(1)}%`}
+                                color="text-green-600"
+                            />
+                            <StatCard
+                                title="Annualized (CAGR)"
+                                value={`${(metrics.cagr * 100).toFixed(1)}%`}
+                                icon={TrendingUp}
+                                color="text-blue-600"
+                            />
+                            <StatCard
+                                title="Sharpe Ratio"
+                                value={metrics.sharpeRatio.toFixed(2)}
+                                icon={Activity}
+                                subtext="Risk Adjusted (3% RFR)"
+                            />
+                            <StatCard
+                                title="Volatility"
+                                value={`${(metrics.volatility * 100).toFixed(1)}%`}
+                                icon={AlertTriangle}
+                                color="text-orange-500"
+                            />
+                            <StatCard
+                                title="S&P 500 Correl."
+                                value={metrics.sp500Correlation !== undefined ? metrics.sp500Correlation.toFixed(2) : 'N/A'}
+                                icon={Activity}
+                                color={
+                                    metrics.sp500Correlation === undefined ? "text-gray-400" :
+                                    metrics.sp500Correlation > 0.7 ? "text-blue-600" :
+                                    metrics.sp500Correlation > 0.3 ? "text-gray-600" :
+                                    "text-orange-500"
+                                }
+                                subtext={
+                                    metrics.sp500Correlation === undefined ? "Unavailable" :
+                                    metrics.sp500Correlation > 0.7 ? "High correlation" :
+                                    metrics.sp500Correlation > 0.3 ? "Moderate" :
+                                    "Low correlation"
+                                }
+                            />
+                        </div>
                     </div>
 
-                    <PerformanceChart data={chartData} />
+                    <PerformanceChartTabs portfolioData={chartData} rollingMetrics={rollingMetrics} />
 
                     {/* Additional Stats */}
                     <div className="grid grid-cols-3 gap-3">
